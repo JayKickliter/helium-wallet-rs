@@ -22,13 +22,13 @@ pub enum Cmd {
 }
 
 impl Cmd {
-    pub async fn run(self, opts: Opts) -> Result {
+    pub fn run(self, opts: Opts) -> Result {
         match self {
-            Self::Stake(cmd) => cmd.run(opts).await,
-            Self::Unstake(cmd) => cmd.run(opts).await,
-            Self::Transfer(cmd) => cmd.run(opts).await,
-            Self::List(cmd) => cmd.run(opts).await,
-            Self::Generate(cmd) => cmd.run(opts).await,
+            Self::Stake(cmd) => cmd.run(opts),
+            Self::Unstake(cmd) => cmd.run(opts),
+            Self::Transfer(cmd) => cmd.run(opts),
+            Self::List(cmd) => cmd.run(opts),
+            Self::Generate(cmd) => cmd.run(opts),
         }
     }
 }

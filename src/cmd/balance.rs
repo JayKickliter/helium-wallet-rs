@@ -17,7 +17,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let addresses = collect_addresses(opts.files, self.addresses.clone())?;
         let api_url = api_url(
             addresses
@@ -28,14 +28,16 @@ impl Cmd {
         let client = new_client(api_url);
 
         let mut results = Vec::with_capacity(self.addresses.len());
-        for address in addresses {
-            results.push((
-                address.to_string(),
-                accounts::get(&client, &address.to_string())
-                    .await
-                    .map_err(|e| e.into()),
-            ));
-        }
+        crate::synchronize(async {
+            for address in addresses {
+                results.push((
+                    address.to_string(),
+                    accounts::get(&client, &address.to_string())
+                        .await
+                        .map_err(|e| e.into()),
+                ));
+            }
+        });
         print_results(results, opts.format)
     }
 }

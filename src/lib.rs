@@ -11,3 +11,9 @@ pub mod result;
 pub mod staking;
 pub mod traits;
 pub mod wallet;
+
+pub(crate) fn synchronize<F: std::future::Future>(future: F) -> F::Output {
+    tokio::runtime::Runtime::new()
+        .expect("failed to create async runtime")
+        .block_on(future)
+}

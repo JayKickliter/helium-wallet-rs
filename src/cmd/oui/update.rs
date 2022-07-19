@@ -100,7 +100,7 @@ pub struct RequestSubnet {
 }
 
 impl Update {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -151,16 +151,16 @@ impl Update {
             nonce: if let Some(nonce) = nonce {
                 nonce
             } else {
-                ouis::get(&client, oui.into()).await?.nonce + 1
+                crate::synchronize(ouis::get(&client, oui.into()))?.nonce + 1
             },
         };
-        let fees = get_txn_fees(&client).await?;
+        let fees = get_txn_fees(&client)?;
         txn.fee = txn.txn_fee(&fees)?;
         txn.staking_fee = txn.txn_staking_fee(&fees)?;
         txn.signature = txn.sign(&keypair)?;
         let envelope = txn.in_envelope();
 
-        let status = maybe_submit_txn(commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(commit, &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 }

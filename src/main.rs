@@ -39,34 +39,33 @@ pub enum Cmd {
     Sign(sign::Cmd),
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let cli = Cli::from_args();
-    if let Err(e) = run(cli).await {
+    if let Err(e) = run(cli) {
         eprintln!("error: {:?}", e);
         process::exit(1);
     }
 }
 
-async fn run(cli: Cli) -> Result {
+fn run(cli: Cli) -> Result {
     match cli.cmd {
-        Cmd::Info(cmd) => cmd.run(cli.opts).await,
-        Cmd::Verify(cmd) => cmd.run(cli.opts).await,
-        Cmd::Balance(cmd) => cmd.run(cli.opts).await,
-        Cmd::Hotspots(cmd) => cmd.run(cli.opts).await,
-        Cmd::Create(cmd) => cmd.run(cli.opts).await,
-        Cmd::Upgrade(cmd) => cmd.run(cli.opts).await,
-        Cmd::Pay(cmd) => cmd.run(cli.opts).await,
-        Cmd::Htlc(cmd) => cmd.run(cli.opts).await,
-        Cmd::Oui(cmd) => cmd.run(cli.opts).await,
-        Cmd::Oracle(cmd) => cmd.run(cli.opts).await,
-        Cmd::Securities(cmd) => cmd.run(cli.opts).await,
-        Cmd::Burn(cmd) => cmd.run(cli.opts).await,
-        Cmd::Multisig(cmd) => cmd.run(cli.opts).await,
-        Cmd::Request(cmd) => cmd.run(cli.opts).await,
-        Cmd::Vars(cmd) => cmd.run(cli.opts).await,
-        Cmd::Validators(cmd) => cmd.run(cli.opts).await,
-        Cmd::Commit(cmd) => cmd.run(cli.opts).await,
-        Cmd::Sign(cmd) => cmd.run(cli.opts).await,
+        Cmd::Info(cmd) => cmd.run(cli.opts),
+        Cmd::Verify(cmd) => cmd.run(cli.opts),
+        Cmd::Balance(cmd) => cmd.run(cli.opts),
+        Cmd::Hotspots(cmd) => cmd.run(cli.opts),
+        Cmd::Create(cmd) => cmd.run(cli.opts),
+        Cmd::Upgrade(cmd) => cmd.run(cli.opts),
+        Cmd::Pay(cmd) => cmd.run(cli.opts),
+        Cmd::Htlc(cmd) => cmd.run(cli.opts),
+        Cmd::Oui(cmd) => cmd.run(cli.opts),
+        Cmd::Oracle(cmd) => cmd.run(cli.opts),
+        Cmd::Securities(cmd) => cmd.run(cli.opts),
+        Cmd::Burn(cmd) => cmd.run(cli.opts),
+        Cmd::Multisig(cmd) => cmd.run(cli.opts),
+        Cmd::Request(cmd) => cmd.run(cli.opts),
+        Cmd::Vars(cmd) => cmd.run(cli.opts),
+        Cmd::Validators(cmd) => cmd.run(cli.opts),
+        Cmd::Commit(cmd) => cmd.run(cli.opts),
+        Cmd::Sign(cmd) => cmd.run(cli.opts),
     }
 }

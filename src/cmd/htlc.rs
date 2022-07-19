@@ -54,23 +54,23 @@ pub struct Redeem {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Create(cmd) => cmd.run(opts).await,
-            Cmd::Redeem(cmd) => cmd.run(opts).await,
+            Cmd::Create(cmd) => cmd.run(opts),
+            Cmd::Redeem(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Create {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let client = new_client(api_url(wallet.public_key.network));
 
         let keypair = wallet.decrypt(password.as_bytes())?;
         let wallet_address = keypair.public_key();
-        let account = accounts::get(&client, &wallet_address.to_string()).await?;
+        let account = crate::synchronize(accounts::get(&client, &wallet_address.to_string()))?;
         let address = Keypair::generate(wallet_address.key_tag());
 
         let mut txn = BlockchainTxnCreateHtlcV1 {
@@ -84,11 +84,11 @@ impl Create {
             nonce: account.speculative_nonce + 1,
             signature: Vec::new(),
         };
-        txn.fee = txn.txn_fee(&get_txn_fees(&client).await?)?;
+        txn.fee = txn.txn_fee(&get_txn_fees(&client)?)?;
         txn.signature = txn.sign(&keypair)?;
         let envelope = txn.in_envelope();
 
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_create_txn(&txn, &envelope, &status, opts.format)
     }
 }
@@ -132,7 +132,7 @@ fn print_create_txn(
 }
 
 impl Redeem {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -145,11 +145,11 @@ impl Redeem {
             preimage: self.preimage.clone().into_bytes(),
             signature: Vec::new(),
         };
-        txn.fee = txn.txn_fee(&get_txn_fees(&client).await?)?;
+        txn.fee = txn.txn_fee(&get_txn_fees(&client)?)?;
         txn.signature = txn.sign(&keypair)?;
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_redeem_txn(&txn, &envelope, &status, opts.format)
     }
 }

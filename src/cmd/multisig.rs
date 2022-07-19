@@ -57,11 +57,11 @@ pub struct Combine {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Inspect(cmd) => cmd.run(opts).await,
-            Cmd::Sign(cmd) => cmd.run(opts).await,
-            Cmd::Combine(cmd) => cmd.run(opts).await,
+            Cmd::Inspect(cmd) => cmd.run(opts),
+            Cmd::Sign(cmd) => cmd.run(opts),
+            Cmd::Combine(cmd) => cmd.run(opts),
         }
     }
 }
@@ -83,14 +83,14 @@ struct Proofs {
 }
 
 impl Inspect {
-    pub async fn run(&self, _opts: Opts) -> Result {
+    pub fn run(&self, _opts: Opts) -> Result {
         let txn = Artifact::load_txn(&self.artifact)?;
         print_txn(&txn, &None)
     }
 }
 
 impl Prove {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -108,7 +108,7 @@ impl Prove {
 }
 
 impl Combine {
-    pub async fn run(&self, _opts: Opts) -> Result {
+    pub fn run(&self, _opts: Opts) -> Result {
         let mut envelope = Artifact::load_txn(&self.artifact)?;
         // Load proofs and key_proof maps from txn
         let mut combined_proofs = Proofs::from_txn(&envelope)?;
@@ -119,7 +119,7 @@ impl Combine {
         combined_proofs.apply(&mut envelope)?;
 
         let client = new_client(api_url(self.network));
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&envelope, &status)
     }
 }

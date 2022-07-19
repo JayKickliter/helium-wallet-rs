@@ -71,7 +71,7 @@ pub struct Multi {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let payments = self.collect_payments()?;
 
         let password = get_password(false)?;
@@ -88,7 +88,8 @@ impl Cmd {
             nonce: if let Some(nonce) = self.nonce() {
                 nonce
             } else {
-                let account = accounts::get(&client, &keypair.public_key().to_string()).await?;
+                let account =
+                    crate::synchronize(accounts::get(&client, &keypair.public_key().to_string()))?;
                 account.speculative_nonce + 1
             },
             signature: Vec::new(),
@@ -97,12 +98,12 @@ impl Cmd {
         txn.fee = if let Some(fee) = self.fee() {
             fee
         } else {
-            txn.txn_fee(&get_txn_fees(&client).await?)?
+            txn.txn_fee(&get_txn_fees(&client)?)?
         };
         txn.signature = txn.sign(&keypair)?;
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit(), &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit(), &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 

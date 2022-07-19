@@ -27,7 +27,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(self, opts: Opts) -> Result {
+    pub fn run(self, opts: Opts) -> Result {
         let mut txn = BlockchainTxnAddGatewayV1::from_envelope(&read_txn(&self.txn)?)?;
 
         let password = get_password(false)?;
@@ -49,14 +49,12 @@ impl Cmd {
                 // Only have staking server sign if there's an onboarding key,
                 // and we're actually going to commit
                 let onboarding_key = self.onboarding.as_ref().unwrap().replace('\"', "");
-                staking_client
-                    .sign(&onboarding_key, &txn.in_envelope())
-                    .await
+                staking_client.sign(&onboarding_key, &txn.in_envelope())
             }
             _key => Ok(txn.in_envelope()),
         }?;
 
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&txn, &status, opts.format)
     }
 }

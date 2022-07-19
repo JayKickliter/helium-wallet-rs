@@ -72,16 +72,16 @@ pub struct Accept {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Self::Accept(cmd) => cmd.run(opts).await,
-            Self::Create(cmd) => cmd.run(opts).await,
+            Self::Accept(cmd) => cmd.run(opts),
+            Self::Create(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Create {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -104,9 +104,11 @@ impl Create {
                 u64::from(stake_amount)
             } else {
                 u64::from(
-                    helium_api::validators::get(&client, &self.old_address.to_string())
-                        .await?
-                        .stake,
+                    crate::synchronize(helium_api::validators::get(
+                        &client,
+                        &self.old_address.to_string(),
+                    ))?
+                    .stake,
                 )
             },
             payment_amount: u64::from(self.payment),
@@ -117,7 +119,7 @@ impl Create {
         txn.fee = if let Some(fee) = self.fee {
             fee
         } else {
-            txn.txn_fee(&get_txn_fees(&client).await?)?
+            txn.txn_fee(&get_txn_fees(&client)?)?
         };
         if old_owner == &wallet.public_key {
             txn.old_owner_signature = txn.sign(&keypair)?;
@@ -129,13 +131,13 @@ impl Create {
         }
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(Some(&envelope), &txn, &status, opts.format)
     }
 }
 
 impl Accept {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let mut txn = BlockchainTxnTransferValidatorStakeV1::from_envelope(&read_txn(&self.txn)?)?;
 
         let password = get_password(false)?;
@@ -154,7 +156,7 @@ impl Accept {
         let client = new_client(api_url(wallet.public_key.network));
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(Some(&envelope), &txn, &status, opts.format)
     }
 }

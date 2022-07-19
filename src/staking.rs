@@ -48,42 +48,46 @@ impl Client {
     }
 
     /// Fetch the public maker key for a given onboarding key
-    pub async fn address_for(&self, gateway: &PublicKey) -> Result<PublicKey> {
-        let request_url = format!("{}/hotspots/{}", self.base_url, gateway);
-        let response: serde_json::Value = self
-            .client
-            .get(&request_url)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        response["data"]["maker"]["address"]
-            .as_str()
-            .map_or(Err(anyhow!("Invalid staking address from server")), |v| {
-                v.parse().map_err(|e: helium_crypto::Error| e.into())
-            })
+    pub fn address_for(&self, gateway: &PublicKey) -> Result<PublicKey> {
+        crate::synchronize(async {
+            let request_url = format!("{}/hotspots/{}", self.base_url, gateway);
+            let response: serde_json::Value = self
+                .client
+                .get(&request_url)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+            response["data"]["maker"]["address"]
+                .as_str()
+                .map_or(Err(anyhow!("Invalid staking address from server")), |v| {
+                    v.parse().map_err(|e: helium_crypto::Error| e.into())
+                })
+        })
     }
 
     /// Get the staking server to sign a given transaction using the
     /// given onboarding key
-    pub async fn sign(&self, onboarding_key: &str, txn: &BlockchainTxn) -> Result<BlockchainTxn> {
-        let encoded = txn.to_b64()?;
-        let json = json!({ "transaction": encoded });
+    pub fn sign(&self, onboarding_key: &str, txn: &BlockchainTxn) -> Result<BlockchainTxn> {
+        crate::synchronize(async {
+            let encoded = txn.to_b64()?;
+            let json = json!({ "transaction": encoded });
 
-        let request_url = format!("{}/transactions/pay/{}", self.base_url, onboarding_key);
-        let response: serde_json::Value = self
-            .client
-            .post(&request_url)
-            .json(&json)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        let txn_data = response["data"]["transaction"]
-            .as_str()
-            .ok_or_else(|| anyhow!("Unexpected transaction response from staking server"))?;
-        BlockchainTxn::from_b64(txn_data)
+            let request_url = format!("{}/transactions/pay/{}", self.base_url, onboarding_key);
+            let response: serde_json::Value = self
+                .client
+                .post(&request_url)
+                .json(&json)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+            let txn_data = response["data"]["transaction"]
+                .as_str()
+                .ok_or_else(|| anyhow!("Unexpected transaction response from staking server"))?;
+            BlockchainTxn::from_b64(txn_data)
+        })
     }
 }

@@ -47,7 +47,7 @@ pub struct Create {
 }
 
 impl Create {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -58,7 +58,7 @@ impl Create {
         let oui = if let Some(oui) = self.last_oui {
             oui
         } else {
-            ouis::last(&client).await?.oui
+            crate::synchronize(ouis::last(&client))?.oui
         };
 
         let mut txn = BlockchainTxnOuiV1 {
@@ -74,7 +74,7 @@ impl Create {
             filter: base64::decode(&self.filter)?,
         };
 
-        let fees = &get_txn_fees(&client).await?;
+        let fees = &get_txn_fees(&client)?;
 
         txn.fee = txn.txn_fee(fees)?;
         txn.staking_fee = txn.txn_staking_fee(fees)?;
@@ -85,7 +85,7 @@ impl Create {
         match self.payer.as_ref() {
             key if key == Some(wallet_key) || key.is_none() => {
                 // Payer is the wallet submit if ready to commit
-                let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+                let status = maybe_submit_txn(self.commit, &client, &envelope)?;
                 print_txn(&txn, &envelope, &status, opts.format)
             }
             _ => {

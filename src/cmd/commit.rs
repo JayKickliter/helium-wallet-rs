@@ -14,13 +14,13 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let envelope = read_txn(&self.txn)?;
 
         let wallet = load_wallet(opts.files)?;
         let client = new_client(api_url(wallet.public_key.network));
 
-        let status = maybe_submit_txn(true, &client, &envelope).await?;
+        let status = maybe_submit_txn(true, &client, &envelope)?;
         print_txn(&envelope, &status, opts.format)
     }
 }

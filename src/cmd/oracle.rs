@@ -35,22 +35,22 @@ pub struct Report {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Report(cmd) => cmd.run(opts).await,
+            Cmd::Report(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Report {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
 
         let client = new_client(api_url(wallet.public_key.network));
-        let block_height = self.block.to_block(&client).await?;
-        let price = u64::from(self.price.to_usd().await?);
+        let block_height = self.block.to_block(&client)?;
+        let price = u64::from(self.price.to_usd()?);
         let mut txn = BlockchainTxnPriceOracleV1 {
             public_key: keypair.public_key().into(),
             price,
@@ -60,7 +60,7 @@ impl Report {
         txn.signature = txn.sign(&keypair)?;
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 }
@@ -113,9 +113,9 @@ impl FromStr for Block {
 }
 
 impl Block {
-    async fn to_block(self, client: &Client) -> Result<u64> {
+    fn to_block(self, client: &Client) -> Result<u64> {
         match self {
-            Block::Auto => Ok(blocks::height(client).await?),
+            Block::Auto => Ok(crate::synchronize(blocks::height(client))?),
             Block::Height(height) => Ok(height),
         }
     }
@@ -132,51 +132,54 @@ enum Price {
 }
 
 impl Price {
-    async fn to_usd(&self) -> Result<Usd> {
-        match self {
-            Self::CoinGecko => {
-                let response =
-                    reqwest::get("https://api.coingecko.com/api/v3/coins/helium").await?;
-                let json: serde_json::Value = response.json().await?;
-                let amount = &json["market_data"]["current_price"]["usd"].to_string();
-                Ok(Usd::from_str(amount)?)
+    fn to_usd(&self) -> Result<Usd> {
+        crate::synchronize(async {
+            match self {
+                Self::CoinGecko => {
+                    let response =
+                        reqwest::get("https://api.coingecko.com/api/v3/coins/helium").await?;
+                    let json: serde_json::Value = response.json().await?;
+                    let amount = &json["market_data"]["current_price"]["usd"].to_string();
+                    Ok(Usd::from_str(amount)?)
+                }
+                Self::Bilaxy => {
+                    let response =
+                        reqwest::get("https://newapi.bilaxy.com/v1/valuation?currency=HNT").await?;
+                    let json: serde_json::Value = response.json().await?;
+                    let amount = &json["HNT"]["usd_value"]
+                        .as_str()
+                        .ok_or_else(|| anyhow!("No USD value found"))?;
+                    Ok(Usd::from_str(amount)?)
+                }
+                Self::BinanceUs => {
+                    let response =
+                        reqwest::get("https://api.binance.us/api/v3/ticker/price?symbol=HNTUSD")
+                            .await?;
+                    let json: serde_json::Value = response.json().await?;
+                    let amount = &json["price"]
+                        .as_str()
+                        .ok_or_else(|| anyhow!("No USD value found"))?;
+                    Ok(Usd::from_str(amount)?)
+                }
+                Self::BinanceInt => {
+                    let response =
+                        reqwest::get("https://api.binance.us/api/v3/avgPrice?symbol=HNTUSDT")
+                            .await?;
+                    let json: serde_json::Value = response.json().await?;
+                    let amount = &json["price"]
+                        .as_str()
+                        .ok_or_else(|| anyhow!("No USD value found"))?;
+                    Ok(Usd::from_str(amount)?)
+                }
+                Self::Ftx => {
+                    let response = reqwest::get("https://ftx.com/api/markets/HNT/USD").await?;
+                    let json: serde_json::Value = response.json().await?;
+                    let amount = &json["result"]["price"].to_string();
+                    Ok(Usd::from_str(amount)?)
+                }
+                Self::Usd(v) => Ok(*v),
             }
-            Self::Bilaxy => {
-                let response =
-                    reqwest::get("https://newapi.bilaxy.com/v1/valuation?currency=HNT").await?;
-                let json: serde_json::Value = response.json().await?;
-                let amount = &json["HNT"]["usd_value"]
-                    .as_str()
-                    .ok_or_else(|| anyhow!("No USD value found"))?;
-                Ok(Usd::from_str(amount)?)
-            }
-            Self::BinanceUs => {
-                let response =
-                    reqwest::get("https://api.binance.us/api/v3/ticker/price?symbol=HNTUSD")
-                        .await?;
-                let json: serde_json::Value = response.json().await?;
-                let amount = &json["price"]
-                    .as_str()
-                    .ok_or_else(|| anyhow!("No USD value found"))?;
-                Ok(Usd::from_str(amount)?)
-            }
-            Self::BinanceInt => {
-                let response =
-                    reqwest::get("https://api.binance.us/api/v3/avgPrice?symbol=HNTUSDT").await?;
-                let json: serde_json::Value = response.json().await?;
-                let amount = &json["price"]
-                    .as_str()
-                    .ok_or_else(|| anyhow!("No USD value found"))?;
-                Ok(Usd::from_str(amount)?)
-            }
-            Self::Ftx => {
-                let response = reqwest::get("https://ftx.com/api/markets/HNT/USD").await?;
-                let json: serde_json::Value = response.json().await?;
-                let amount = &json["result"]["price"].to_string();
-                Ok(Usd::from_str(amount)?)
-            }
-            Self::Usd(v) => Ok(*v),
-        }
+        })
     }
 }
 

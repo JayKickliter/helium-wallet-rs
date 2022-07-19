@@ -18,11 +18,14 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(self, opts: Opts) -> Result {
+    pub fn run(self, opts: Opts) -> Result {
         let wallet = load_wallet(opts.files)?;
         let client = new_client(api_url(wallet.public_key.network));
 
-        let hotspot = helium_api::hotspots::get(&client, &self.gateway.to_string()).await?;
+        let hotspot = crate::synchronize(helium_api::hotspots::get(
+            &client,
+            &self.gateway.to_string(),
+        ))?;
         // Get the next likely gateway nonce for the new transaction
         let nonce = hotspot.speculative_nonce + 1;
 
@@ -34,13 +37,13 @@ impl Cmd {
             new_owner: self.new_owner.into(),
             owner_signature: vec![],
         };
-        txn.fee = txn.txn_fee(&get_txn_fees(&client).await?)?;
+        txn.fee = txn.txn_fee(&get_txn_fees(&client)?)?;
         let password = get_password(false)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
         txn.owner_signature = txn.sign(&keypair)?;
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 }

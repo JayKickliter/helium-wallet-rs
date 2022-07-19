@@ -15,7 +15,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let addresses = collect_addresses(opts.files, self.addresses.clone())?;
         let api_url = api_url(
             addresses
@@ -28,9 +28,7 @@ impl Cmd {
             Vec::with_capacity(self.addresses.len());
         for address in addresses {
             let validators: Result<Vec<Validator>> =
-                accounts::validators(&client, &address.to_string())
-                    .into_vec()
-                    .await
+                crate::synchronize(accounts::validators(&client, &address.to_string()).into_vec())
                     .map_err(|e| e.into());
             results.push((address.clone(), validators));
         }

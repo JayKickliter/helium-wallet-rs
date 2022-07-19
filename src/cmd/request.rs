@@ -30,16 +30,16 @@ pub struct Burn {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Payment(cmd) => cmd.run(opts).await,
-            Cmd::Burn(cmd) => cmd.run(opts).await,
+            Cmd::Payment(cmd) => cmd.run(opts),
+            Cmd::Burn(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Payment {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let wallet = load_wallet(opts.files)?;
 
         let mut request = json!({
@@ -54,7 +54,7 @@ impl Payment {
 }
 
 impl Burn {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let wallet = load_wallet(opts.files)?;
 
         let mut request = json!({

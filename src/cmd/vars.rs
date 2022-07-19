@@ -58,30 +58,30 @@ pub struct Create {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Current(cmd) => cmd.run(opts).await,
-            Cmd::Create(cmd) => cmd.run(opts).await,
+            Cmd::Current(cmd) => cmd.run(opts),
+            Cmd::Create(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Current {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let wallet = load_wallet(opts.files)?;
         let network = self.network.unwrap_or(wallet.public_key.network);
         let client = new_client(api_url(network));
-        let vars = vars::get(&client).await?;
+        let vars = crate::synchronize(vars::get(&client))?;
         print_json(&vars)
     }
 }
 
 impl Create {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let wallet = load_wallet(opts.files)?;
         let network = self.network.unwrap_or(wallet.public_key.network);
         let client = new_client(api_url(network));
-        let vars = vars::get(&client).await?;
+        let vars = crate::synchronize(vars::get(&client))?;
 
         let mut txn = BlockchainTxnVarsV1 {
             version_predicate: 0,

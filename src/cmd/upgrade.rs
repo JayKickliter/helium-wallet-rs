@@ -49,16 +49,16 @@ pub struct Sharded {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Basic(cmd) => cmd.run(opts).await,
-            Cmd::Sharded(cmd) => cmd.run(opts).await,
+            Cmd::Basic(cmd) => cmd.run(opts),
+            Cmd::Sharded(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Basic {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -74,7 +74,7 @@ impl Basic {
 }
 
 impl Sharded {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;

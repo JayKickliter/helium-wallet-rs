@@ -27,22 +27,23 @@ pub struct Transfer {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Transfer(cmd) => cmd.run(opts).await,
+            Cmd::Transfer(cmd) => cmd.run(opts),
         }
     }
 }
 
 impl Transfer {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
 
         let client = new_client(api_url(wallet.public_key.network));
 
         let keypair = wallet.decrypt(password.as_bytes())?;
-        let account = accounts::get(&client, &keypair.public_key().to_string()).await?;
+        let account =
+            crate::synchronize(accounts::get(&client, &keypair.public_key().to_string()))?;
 
         let mut txn = BlockchainTxnSecurityExchangeV1 {
             payer: keypair.public_key().into(),
@@ -52,11 +53,11 @@ impl Transfer {
             fee: 0,
             signature: vec![],
         };
-        txn.fee = txn.txn_fee(&get_txn_fees(&client).await?)?;
+        txn.fee = txn.txn_fee(&get_txn_fees(&client)?)?;
         txn.signature = txn.sign(&keypair)?;
 
         let envelope = txn.in_envelope();
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 }

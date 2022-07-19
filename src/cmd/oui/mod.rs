@@ -15,10 +15,10 @@ pub enum Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Cmd::Create(cmd) => cmd.run(opts).await,
-            Cmd::Update(cmd) => cmd.run(opts).await,
+            Cmd::Create(cmd) => cmd.run(opts),
+            Cmd::Update(cmd) => cmd.run(opts),
         }
     }
 }

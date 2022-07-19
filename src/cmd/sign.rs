@@ -11,11 +11,11 @@ pub enum Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Self::File(cmd) => cmd.run(opts).await,
-            Self::Msg(cmd) => cmd.run(opts).await,
-            Self::Verify(cmd) => cmd.run(opts).await,
+            Self::File(cmd) => cmd.run(opts),
+            Self::Msg(cmd) => cmd.run(opts),
+            Self::Verify(cmd) => cmd.run(opts),
         }
     }
 }
@@ -28,7 +28,7 @@ pub struct File {
 }
 
 impl File {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         use std::io::Read;
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
@@ -49,7 +49,7 @@ pub struct Msg {
 }
 
 impl Msg {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
@@ -66,10 +66,10 @@ pub enum Verify {
 }
 
 impl Verify {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match self {
-            Self::File(cmd) => cmd.run(opts).await,
-            Self::Msg(cmd) => cmd.run(opts).await,
+            Self::File(cmd) => cmd.run(opts),
+            Self::Msg(cmd) => cmd.run(opts),
         }
     }
 }
@@ -86,7 +86,7 @@ pub struct VerifyFile {
 }
 
 impl VerifyFile {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         use helium_crypto::Verify;
         use std::io::Read;
         let wallet = load_wallet(opts.files)?;
@@ -110,7 +110,7 @@ pub struct VerifyMsg {
 }
 
 impl VerifyMsg {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         use helium_crypto::Verify;
         let wallet = load_wallet(opts.files)?;
         let signature = base64::decode(&self.signature)?;

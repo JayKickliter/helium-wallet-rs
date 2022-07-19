@@ -61,14 +61,14 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(self, opts: Opts) -> Result {
+    pub fn run(self, opts: Opts) -> Result {
         let password = get_password(false)?;
         let wallet = load_wallet(opts.files)?;
         let keypair = wallet.decrypt(password.as_bytes())?;
 
         let staking_client = staking::Client::default();
         let client = new_client(api_url(wallet.public_key.network));
-        let hotspot = hotspots::get(&client, &self.gateway.to_string()).await?;
+        let hotspot = crate::synchronize(hotspots::get(&client, &self.gateway.to_string()))?;
         let gain: i32 = if let Some(gain) = self.gain.or(hotspot.gain) {
             gain.into()
         } else {
@@ -81,12 +81,15 @@ impl Cmd {
         };
 
         let wallet_key = keypair.public_key();
-        let hotspot = helium_api::hotspots::get(&client, &self.gateway.to_string()).await?;
+        let hotspot = crate::synchronize(helium_api::hotspots::get(
+            &client,
+            &self.gateway.to_string(),
+        ))?;
         // Get the next likely gateway nonce for the new transaction
         let nonce = self.nonce.unwrap_or(hotspot.speculative_nonce + 1);
         let mode = self.mode.unwrap_or(hotspot.mode);
         let payer = if self.onboarding {
-            staking_client.address_for(&self.gateway).await?.into()
+            staking_client.address_for(&self.gateway)?.into()
         } else {
             wallet.public_key.into()
         };
@@ -117,7 +120,7 @@ impl Cmd {
             fee: 0,
         };
 
-        let fees = &get_txn_fees(&client).await?;
+        let fees = &get_txn_fees(&client)?;
         txn.fee = txn.txn_fee(fees)?;
         txn.staking_fee = match hotspot.location {
             Some(hotspot_location) if hotspot_location == location => 0,
@@ -128,9 +131,7 @@ impl Cmd {
 
         let envelope = if self.onboarding {
             if self.commit {
-                staking_client
-                    .sign(&self.gateway.to_string(), &txn.in_envelope())
-                    .await
+                staking_client.sign(&self.gateway.to_string(), &txn.in_envelope())
             } else {
                 Ok(txn.in_envelope())
             }
@@ -139,7 +140,7 @@ impl Cmd {
             Ok(txn.in_envelope())
         }?;
 
-        let status = maybe_submit_txn(self.commit, &client, &envelope).await?;
+        let status = maybe_submit_txn(self.commit, &client, &envelope)?;
         print_txn(&txn, &envelope, &status, opts.format)
     }
 }

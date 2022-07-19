@@ -17,7 +17,7 @@ pub struct Cmd {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         match &self.address {
             Some(public_key) => print_public_key(public_key, opts.format),
             None => {
@@ -27,7 +27,7 @@ impl Cmd {
                     Ok(())
                 } else {
                     let client = new_client(api_url(wallet.public_key.network));
-                    let account = accounts::get(&client, &wallet.address()?).await?;
+                    let account = crate::synchronize(accounts::get(&client, &wallet.address()?))?;
                     print_wallet(&wallet, &account, opts.format)
                 }
             }

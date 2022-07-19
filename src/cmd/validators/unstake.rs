@@ -70,7 +70,7 @@ pub struct Multi {
 }
 
 impl Cmd {
-    pub async fn run(&self, opts: Opts) -> Result {
+    pub fn run(&self, opts: Opts) -> Result {
         let validators = self.collect_unstake_validators()?;
 
         let password = get_password(false)?;
@@ -79,7 +79,7 @@ impl Cmd {
 
         let client = new_client(api_url(wallet.public_key.network));
         let fee_config = if self.fee().is_none() {
-            Some(get_txn_fees(&client).await?)
+            Some(get_txn_fees(&client)?)
         } else {
             None
         };
@@ -92,18 +92,16 @@ impl Cmd {
                     wallet.public_key.network
                 )
             }
-            let txn = self
-                .mk_txn(&client, &keypair, &fee_config, &validator)
-                .await?;
+            let txn = self.mk_txn(&client, &keypair, &fee_config, &validator)?;
             let envelope = txn.in_envelope();
-            let status = maybe_submit_txn(self.commit(), &client, &envelope).await?;
+            let status = maybe_submit_txn(self.commit(), &client, &envelope)?;
             print_txn(&envelope, &txn, &status, &opts.format)?
         }
 
         Ok(())
     }
 
-    async fn mk_txn(
+    fn mk_txn(
         &self,
         client: &Client,
         keypair: &Keypair,
@@ -117,9 +115,11 @@ impl Cmd {
                 u64::from(stake_amount)
             } else {
                 u64::from(
-                    helium_api::validators::get(client, &validator.address.to_string())
-                        .await?
-                        .stake,
+                    crate::synchronize(helium_api::validators::get(
+                        client,
+                        &validator.address.to_string(),
+                    ))?
+                    .stake,
                 )
             },
             fee: 0,
